@@ -44,11 +44,10 @@
         h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: 2px; margin-bottom: 0.2rem; text-align: center; text-transform: uppercase; }
         .subtitle { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-bottom: 1.2rem; font-style: italic; }
 
-        /* Multi-Year Navigation Bar Elements */
         .nav-selectors {
             display: flex;
             gap: 8px;
-            margin-bottom: 1rem;
+            margin-bottom: 0.8rem;
         }
         select {
             flex: 1;
@@ -62,7 +61,38 @@
             outline: none;
         }
 
-        /* Responsive 7-Column Vitals Calendar Grid Matrix */
+        /* Modern, clean button styling for the Return to Today action */
+        .today-btn {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid var(--border-ui);
+            color: var(--text-main);
+            padding: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            transition: all 0.2s ease;
+        }
+        .today-btn:hover { background: #fdfdfb; border-color: var(--text-muted); }
+
+        /* Day-of-the-week labels row */
+        .weekdays-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 0.4rem;
+            text-align: center;
+        }
+        .weekday-label {
+            font-size: 0.68rem;
+            font-weight: bold;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -85,10 +115,22 @@
             position: relative;
             transition: all 0.2s ease;
         }
+        
+        /* Highlight the exact calendar box matching today's actual date */
+        .day-box.is-today-actual {
+            border: 2px solid var(--text-main) !important;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+        
+        .day-box.empty-slot {
+            background: transparent;
+            border: none;
+            pointer-events: none;
+        }
+
         .day-num { font-size: 0.75rem; font-weight: bold; color: var(--text-muted); width: 100%; text-align: left; padding-left: 4px; }
         .day-vitals { font-size: 0.62rem; font-weight: bold; line-height: 1.1; text-align: center; width: 100%; word-break: break-all; }
 
-        /* Auto-Color Coded Status State Modifiers */
         .day-box.v-normal { background: rgba(74, 222, 128, 0.18); border-color: var(--bp-normal); }
         .day-box.v-normal .day-num { color: #166534; }
         .day-box.v-elevated { background: rgba(251, 191, 36, 0.2); border-color: var(--bp-elevated); }
@@ -96,7 +138,6 @@
         .day-box.v-high { background: rgba(248, 113, 113, 0.22); border-color: var(--bp-high); }
         .day-box.v-high .day-num { color: #991b1b; }
 
-        /* Pop-Up Modal Overlay Layer Configuration */
         .modal-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -159,6 +200,20 @@
                 <select id="yearSelector"></select>
             </div>
 
+            <!-- Return to Today Quick Action Control Button -->
+            <button class="today-btn" onclick="jumpToCurrentDate()">📍 Return to Today</button>
+
+            <!-- Sunday to Saturday Weekday Labels Row Header -->
+            <div class="weekdays-header">
+                <span class="weekday-label">Sun</span>
+                <span class="weekday-label">Mon</span>
+                <span class="weekday-label">Tue</span>
+                <span class="weekday-label">Wed</span>
+                <span class="weekday-label">Thu</span>
+                <span class="weekday-label">Fri</span>
+                <span class="weekday-label">Sat</span>
+            </div>
+
             <!-- Dynamic Day Target Boxes Layout Grid Wrapper -->
             <div class="calendar-grid" id="calendarGrid"></div>
 
@@ -213,7 +268,7 @@
         let activeMonth = currentSystemDate.getMonth();
         let activeYear = currentSystemDate.getFullYear();
 
-        // 🗓️ Lifetime 2026-2099 Leap Year Navigation Engine
+        // 🗓️ Lifetime 2026-2050 Dropdown Navigation Engine
         function buildDropdownMenus() {
             monthSelector.innerHTML = '';
             monthNames.forEach((name, idx) => {
@@ -224,8 +279,7 @@
             });
 
             yearSelector.innerHTML = '';
-            // Generates completely out to 2099 seamlessly
-            for (let y = 2026; y <= 2099; y++) {
+            for (let y = 2026; y <= 2050; y++) {
                 const opt = document.createElement('option');
                 opt.value = y; opt.innerText = y;
                 if (y === activeYear) opt.selected = true;
@@ -236,17 +290,53 @@
             yearSelector.addEventListener('change', (e) => { activeYear = parseInt(e.target.value); renderCalendarMatrix(); });
         }
 
+        // Return to Today Jumper Logic
+        function jumpToCurrentDate() {
+            const today = new Date();
+            activeMonth = today.getMonth();
+            activeYear = today.getFullYear();
+            
+            monthSelector.value = activeMonth;
+            yearSelector.value = activeYear;
+            
+            renderCalendarMatrix();
+        }
+
         function getDaysInMonth(year, month) {
-            return new Date(year, month + 1, 0).getDate(); // Triggers automated browser leap-year formulas
+            return new Date(year, month + 1, 0).getDate(); // Handles advanced browser leap years natively
+        }
+
+        function getFirstDayWeekdayIndex(year, month) {
+            return new Date(year, month, 1).getDay(); // Returns 0 for Sunday, 1 for Monday, etc.
         }
 
         function renderCalendarMatrix() {
             calendarGrid.innerHTML = '';
+            
             const totalDays = getDaysInMonth(activeYear, activeMonth);
+            const startWeekdayIndex = getFirstDayWeekdayIndex(activeYear, activeMonth);
+            
+            const todayDateObj = new Date();
+            const actualTodayDay = todayDateObj.getDate();
+            const actualTodayMonth = todayDateObj.getMonth();
+            const actualTodayYear = todayDateObj.getFullYear();
 
+            // 1. Inject empty spacer boxes to offset grid until the correct starting weekday column
+            for (let i = 0; i < startWeekdayIndex; i++) {
+                const emptyBox = document.createElement('div');
+                emptyBox.className = 'day-box empty-slot';
+                calendarGrid.appendChild(emptyBox);
+            }
+
+            // 2. Render real day columns matrix cells
             for (let day = 1; day <= totalDays; day++) {
                 const dayBox = document.createElement('div');
                 dayBox.className = 'day-box';
+                
+                // Highlight real-world current active date box
+                if (day === actualTodayDay && activeMonth === actualTodayMonth && activeYear === actualTodayYear) {
+                    dayBox.classList.add('is-today-actual');
+                }
                 
                 const uniqueDayKey = `vitals_${activeYear}_${activeMonth}_${day}`;
                 const savedData = localStorage.getItem(uniqueDayKey);
@@ -268,7 +358,6 @@
                     }
                 }
 
-                // Click event listener triggers dashboard pop-up panel overlay
                 dayBox.addEventListener('click', () => { openLoggingModal(day, uniqueDayKey); });
                 calendarGrid.appendChild(dayBox);
             }
