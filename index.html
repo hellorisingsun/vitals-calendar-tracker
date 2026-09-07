@@ -213,7 +213,7 @@
         let activeMonth = currentSystemDate.getMonth();
         let activeYear = currentSystemDate.getFullYear();
 
-        // 🗓️ Lifetime 2026-2050 Leap Year Navigation Engine
+        // 🗓️ Lifetime 2026-2099 Leap Year Navigation Engine
         function buildDropdownMenus() {
             monthSelector.innerHTML = '';
             monthNames.forEach((name, idx) => {
@@ -224,8 +224,8 @@
             });
 
             yearSelector.innerHTML = '';
-            // Generates completely out to 2050 seamlessly
-            for (let y = 2026; y <= 2050; y++) {
+            // Generates completely out to 2099 seamlessly
+            for (let y = 2026; y <= 2099; y++) {
                 const opt = document.createElement('option');
                 opt.value = y; opt.innerText = y;
                 if (y === activeYear) opt.selected = true;
