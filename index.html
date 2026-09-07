@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifetime Vitals & Blood Pressure Diary</title>
+    <style>
+        :root {
+            /* Premium Soft Clinical Palette */
+            --bg-color: #f4f4f7;
+            --container-bg: #e8e8f0;
+            --text-main: #2b2d35;
+            --text-muted: #6e707a;
+            --border-ui: #cfcfda;
+            --bp-normal: #4ade80;
+            --bp-elevated: #fbbf24;
+            --bp-high: #f87171;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem 0;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 420px;
+            background: var(--container-bg);
+            padding: 1.5rem;
+            border-radius: 28px;
+            border: 1px solid var(--border-ui);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        h1 { font-size: 1.2rem; font-weight: 300; letter-spacing: 2px; margin-bottom: 0.2rem; text-align: center; text-transform: uppercase; }
+        .subtitle { font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-bottom: 1.2rem; font-style: italic; }
+
+        /* Multi-Year Navigation Bar Elements */
+        .nav-selectors {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1rem;
+        }
+        select {
+            flex: 1;
+            background: #ffffff;
+            border: 1px solid var(--border-ui);
+            color: var(--text-main);
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 12px;
+            outline: none;
+        }
+
+        /* Responsive 7-Column Vitals Calendar Grid Matrix */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 1rem;
+        }
+
+        .day-box {
+            background: #fdfdfb;
+            border: 1px solid var(--border-ui);
+            border-radius: 12px;
+            aspect-ratio: 0.95;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 2px;
+            box-sizing: border-box;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .day-num { font-size: 0.75rem; font-weight: bold; color: var(--text-muted); width: 100%; text-align: left; padding-left: 4px; }
+        .day-vitals { font-size: 0.62rem; font-weight: bold; line-height: 1.1; text-align: center; width: 100%; word-break: break-all; }
+
+        /* Auto-Color Coded Status State Modifiers */
+        .day-box.v-normal { background: rgba(74, 222, 128, 0.18); border-color: var(--bp-normal); }
+        .day-box.v-normal .day-num { color: #166534; }
+        .day-box.v-elevated { background: rgba(251, 191, 36, 0.2); border-color: var(--bp-elevated); }
+        .day-box.v-elevated .day-num { color: #92400e; }
+        .day-box.v-high { background: rgba(248, 113, 113, 0.22); border-color: var(--bp-high); }
+        .day-box.v-high .day-num { color: #991b1b; }
+
+        /* Pop-Up Modal Overlay Layer Configuration */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 17, 23, 0.35);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            border-radius: 28px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 150;
+        }
+        .modal-card {
+            background: #ffffff;
+            width: 85%;
+            padding: 1.3rem;
+            border-radius: 22px;
+            border: 1px solid var(--border-ui);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+        .modal-title { font-size: 0.95rem; font-weight: bold; text-transform: uppercase; margin-bottom: 1rem; color: var(--text-main); }
+        
+        .input-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+        .input-field { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+        .input-field label { font-size: 0.65rem; font-weight: bold; color: var(--text-muted); text-transform: uppercase; }
+        input[type="number"] { background: #f8f8fa; border: 1px solid var(--border-ui); padding: 0.5rem; font-size: 1rem; font-weight: bold; border-radius: 10px; width: 100%; box-sizing: border-box; text-align: center; outline: none; }
+        
+        .btn-stack { display: flex; gap: 8px; }
+        .save-btn { background: var(--text-main); color: #fff; border: none; padding: 0.6rem; font-weight: bold; border-radius: 12px; flex: 2; cursor: pointer; font-size: 0.85rem; }
+        .cancel-btn { background: transparent; border: 1px solid var(--border-ui); color: var(--text-muted); padding: 0.6rem; border-radius: 12px; flex: 1; cursor: pointer; font-size: 0.85rem; }
+
+        .gate-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); border-radius: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; padding: 2rem; box-sizing: border-box; }
+        .gate-screen input[type="password"] { background: #fff; border: 1px solid var(--border-ui); color: var(--text-main); padding: 0.7rem; font-size: 0.9rem; border-radius: 10px; outline: none; width: 100%; text-align: center; margin-bottom: 1rem; }
+        .verify-btn { background: var(--text-main); color: #fff; border: none; padding: 0.7rem; font-size: 0.9rem; border-radius: 22px; font-weight: bold; width: 100%; cursor: pointer; }
+        .etsy-link { display: inline-block; margin-top: 1.5rem; font-size: 0.75rem; color: #6a8caf; text-decoration: underline; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Secure Access Lock Gate -->
+        <div id="authGate" class="gate-screen">
+            <h2 style="font-weight: 300; letter-spacing: 1px; font-size: 1.1rem; margin-bottom: 0.5rem;">DIARY VERIFICATION</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-bottom: 1.5rem; line-height: 1.4;">Please enter your personal license access key found inside your Etsy purchase download sheet.</p>
+            <input type="password" id="passKey" placeholder="Enter License Key...">
+            <button id="unlockBtn" class="verify-btn">UNLOCK DIARY</button>
+            <div id="gateError" style="color: #cc5a5a; font-size: 0.8rem; margin-top: 1rem; visibility: hidden;">Invalid Key. Check spelling.</div>
+            <a href="https://etsy.com" target="_blank" class="etsy-link">🛍️ Purchase License Key at Our Etsy Shop</a>
+        </div>
+
+        <!-- Protected Interactive Workboard Layout -->
+        <div id="appInterface" style="opacity: 0.1; pointer-events: none;">
+            <h1>Vitals Calendar</h1>
+            <div class="subtitle">Personal Lifetime Blood Pressure & Pulse Tracker</div>
+
+            <!-- Multi-Year Navigation Bar Elements -->
+            <div class="nav-selectors">
+                <select id="monthSelector"></select>
+                <select id="yearSelector"></select>
+            </div>
+
+            <!-- Dynamic Day Target Boxes Layout Grid Wrapper -->
+            <div class="calendar-grid" id="calendarGrid"></div>
+
+            <p style="font-size: 0.68rem; color: var(--text-muted); text-align: center; margin-top: 1rem; line-height: 1.4;">
+                🌱 Tap any day box to log your metrics. Vitals stay locked onto that date matrix forever. System handles all leap years dynamically.
+            </p>
+        </div>
+
+        <!-- Interactive Pop-Up Logging Dashboard Overlay -->
+        <div id="modalOverlay" class="modal-overlay">
+            <div class="modal-card">
+                <div class="modal-title" id="modalDateTitle">Log Vitals</div>
+                <div class="input-row">
+                    <div class="input-field">
+                        <label>SYS</label>
+                        <input type="number" id="sysIn" placeholder="120" min="50" max="250">
+                    </div>
+                    <div class="input-field">
+                        <label>DIA</label>
+                        <input type="number" id="diaIn" placeholder="80" min="30" max="150">
+                    </div>
+                    <div class="input-field">
+                        <label>Pulse</label>
+                        <input type="number" id="pulseIn" placeholder="72" min="30" max="200">
+                    </div>
+                </div>
+                <div class="btn-stack">
+                    <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+                    <button class="save-btn" onclick="saveVitalsEntry()">Save Logs</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const authGate = document.getElementById('authGate'), appInterface = document.getElementById('appInterface'), passKey = document.getElementById('passKey'), unlockBtn = document.getElementById('unlockBtn'), gateError = document.getElementById('gateError'), monthSelector = document.getElementById('monthSelector'), yearSelector = document.getElementById('yearSelector'), calendarGrid = document.getElementById('calendarGrid'), modalOverlay = document.getElementById('modalOverlay'), modalDateTitle = document.getElementById('modalDateTitle'), sysIn = document.getElementById('sysIn'), diaIn = document.getElementById('diaIn'), pulseIn = document.getElementById('pulseIn');
+
+        let activeTargetDayKey = null;
+
+        // 🔐 Security Gateway Lock Controller
+        unlockBtn.addEventListener('click', () => {
+            if (passKey.value.trim() === 'TAKEN_TODAY') {
+                authGate.style.display = 'none';
+                appInterface.style.opacity = '1';
+                appInterface.style.pointerEvents = 'all';
+                initializeDashboard();
+            } else { gateError.style.visibility = 'visible'; passKey.value = ''; }
+        });
+        passKey.addEventListener('focus', () => { gateError.style.visibility = 'hidden'; });
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const currentSystemDate = new Date();
+        let activeMonth = currentSystemDate.getMonth();
+        let activeYear = currentSystemDate.getFullYear();
+
+        // 🗓️ Lifetime 2026-2050 Leap Year Navigation Engine
+        function buildDropdownMenus() {
+            monthSelector.innerHTML = '';
+            monthNames.forEach((name, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx; opt.innerText = name;
+                if (idx === activeMonth) opt.selected = true;
+                monthSelector.appendChild(opt);
+            });
+
+            yearSelector.innerHTML = '';
+            // Generates completely out to 2050 seamlessly
+            for (let y = 2026; y <= 2050; y++) {
+                const opt = document.createElement('option');
+                opt.value = y; opt.innerText = y;
+                if (y === activeYear) opt.selected = true;
+                yearSelector.appendChild(opt);
+            }
+
+            monthSelector.addEventListener('change', (e) => { activeMonth = parseInt(e.target.value); renderCalendarMatrix(); });
+            yearSelector.addEventListener('change', (e) => { activeYear = parseInt(e.target.value); renderCalendarMatrix(); });
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month + 1, 0).getDate(); // Triggers automated browser leap-year formulas
+        }
+
+        function renderCalendarMatrix() {
+            calendarGrid.innerHTML = '';
+            const totalDays = getDaysInMonth(activeYear, activeMonth);
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dayBox = document.createElement('div');
+                dayBox.className = 'day-box';
+                
+                const uniqueDayKey = `vitals_${activeYear}_${activeMonth}_${day}`;
+                const savedData = localStorage.getItem(uniqueDayKey);
+
+                dayBox.innerHTML = `<span class="day-num">${day}</span><div class="day-vitals" id="v_${uniqueDayKey}">--</div>`;
+
+                if (savedData) {
+                    const logs = JSON.parse(savedData);
+                    const vitalsContainer = dayBox.querySelector('.day-vitals');
+                    vitalsContainer.innerHTML = `${logs.sys}/${logs.dia}<br>❤️${logs.pulse}`;
+                    
+                    // 📊 Automatic Diagnostic Color-Coding Metrics
+                    if (logs.sys >= 140 || logs.dia >= 90) {
+                        dayBox.classList.add('v-high');
+                    } else if ((logs.sys >= 120 && logs.sys <= 139) || (logs.dia >= 80 && logs.dia <= 89)) {
+                        dayBox.classList.add('v-elevated');
+                    } else if (logs.sys > 0 && logs.dia > 0) {
+                        dayBox.classList.add('v-normal');
+                    }
+                }
+
+                // Click event listener triggers dashboard pop-up panel overlay
+                dayBox.addEventListener('click', () => { openLoggingModal(day, uniqueDayKey); });
+                calendarGrid.appendChild(dayBox);
+            }
+        }
+
+        // 📥 Pop-Up Dashboard Overlay Logic
+        function openLoggingModal(dayNumber, dayKey) {
+            activeTargetDayKey = dayKey;
+            modalDateTitle.innerText = `${monthNames[activeMonth]} ${dayNumber}, ${activeYear}`;
+            
+            const existingData = localStorage.getItem(dayKey);
+            if (existingData) {
+                const logs = JSON.parse(existingData);
+                sysIn.value = logs.sys; diaIn.value = logs.dia; pulseIn.value = logs.pulse;
+            } else {
+                sysIn.value = ''; diaIn.value = ''; pulseIn.value = '';
+            }
+            modalOverlay.style.display = 'flex';
+        }
+
+        function closeModal() { modalOverlay.style.display = 'none'; activeTargetDayKey = null; }
+
+        function saveVitalsEntry() {
+            if (!activeTargetDayKey) return;
+            const sys = parseInt(sysIn.value), dia = parseInt(diaIn.value), pulse = parseInt(pulseIn.value);
+
+            if (!sys || !dia || !pulse) { alert("Please complete all three vitals blocks."); return; }
+
+            const logPayload = { sys, dia, pulse };
+            localStorage.setItem(activeTargetDayKey, JSON.stringify(logPayload));
+            
+            playTactileChime();
+            closeModal();
+            renderCalendarMatrix();
+        }
+
+        // 🔊 Pure Synth High-Volume Tactile Sound Engine (Bypasses phone sleep freezes)
+        function playTactileChime() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(440.00, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        function initializeDashboard() { buildDropdownMenus(); renderCalendarMatrix(); }
+    </script>
+</body>
+</html>
